@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"runtime"
 	"time"
 
 	connector "github.com/ec2ainun/poc-nats/business/connector"
@@ -15,20 +14,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-const genMessages = 500
-
 func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
-	// Exit the main goroutine but allow subscribe to continue running
-	runtime.Goexit()
 }
 
 func run() error {
 	goal := "POC NATS Core requestor"
 	log.Println(goal)
 
+	genMessages := flag.Int("msgs", 500, "message count")
+	delay := flag.Int("d", 1, "delay per msgs")
 	flag.Parse()
 	args := flag.Args()
 	subject := args[0]
@@ -51,10 +48,10 @@ func run() error {
 	streamSvc := connector.NewStreamConnector(streamProvider)
 	profitSvc := service.NewProfitService(streamSvc)
 
-	for i := 0; i < genMessages; i++ {
+	for i := 0; i < *genMessages; i++ {
 		p := profitSvc.RequestProfit(subject, i)
-		log.Printf("Requested on %s:%s\n", subject, p)
-		time.Sleep(2 * time.Second)
+		log.Printf("Requested on %s: %s\n", subject, p)
+		time.Sleep(time.Duration(*delay) * time.Second)
 	}
 
 	return nil
