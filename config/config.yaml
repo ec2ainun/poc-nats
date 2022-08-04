@@ -1,3 +1,2 @@
 serverURL: nats://127.0.0.1:4222
 jetstreamURL: nats://127.0.0.1:5222
-persist: 1
