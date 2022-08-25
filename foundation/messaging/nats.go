@@ -24,14 +24,14 @@ func SetupConnOptions(opts []nats.Option) []nats.Option {
 
 	opts = append(opts, nats.ReconnectWait(reconnectDelay))
 	opts = append(opts, nats.MaxReconnects(int(totalWait/reconnectDelay)))
+	opts = append(opts, nats.DrainTimeout(20*time.Second)) //default SIGTERM k8s 30s
 	opts = append(opts, nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-		log.Printf("Disconnected due to:%s, will attempt reconnects for %.0fm", err, totalWait.Minutes())
+		if err != nil {
+			log.Printf("Got disconnected! Reason: %q, will attempt reconnects for %.0fm", err, totalWait.Minutes())
+		}
 	}))
 	opts = append(opts, nats.ReconnectHandler(func(nc *nats.Conn) {
-		log.Printf("Reconnected [%s]", nc.ConnectedUrl())
-	}))
-	opts = append(opts, nats.ClosedHandler(func(nc *nats.Conn) {
-		log.Fatalf("Exiting: %v", nc.LastError())
+		log.Printf("Got reconnected to %v!\n", nc.ConnectedUrl())
 	}))
 	return opts
 }
