@@ -13,23 +13,23 @@ import (
 
 func NewJetStreamProvider(server *nats.Conn, stream nats.JetStreamContext) *Stream {
 	return &Stream{
-		svc:         server,
-		eventStream: stream,
+		svc:   server,
+		event: stream,
 	}
 }
 
 func NewJetStreamProducerProvider(server *nats.Conn, stream nats.JetStreamContext, pubType string) *Stream {
 	return &Stream{
-		svc:         server,
-		eventStream: stream,
-		pubType:     pubType,
+		svc:     server,
+		event:   stream,
+		pubType: pubType,
 	}
 }
 
 func NewJetStreamConsumerProvider(server *nats.Conn, stream nats.JetStreamContext, subType, streamName, consumerName, queueName string) *Stream {
 	return &Stream{
 		svc:          server,
-		eventStream:  stream,
+		event:        stream,
 		subType:      subType,
 		streamName:   streamName,
 		consumerName: consumerName,
@@ -39,7 +39,7 @@ func NewJetStreamConsumerProvider(server *nats.Conn, stream nats.JetStreamContex
 
 func (s *Stream) Create(name, subject string) error {
 	subs := strings.Split(subject, ",")
-	_, err := s.eventStream.AddStream(&nats.StreamConfig{
+	_, err := s.event.AddStream(&nats.StreamConfig{
 		Name:     name,
 		Subjects: subs,
 		MaxBytes: 256 << 20,
@@ -53,7 +53,7 @@ func (s *Stream) Create(name, subject string) error {
 
 func (s *Stream) Update(name, subject string) error {
 	subs := strings.Split(subject, ",")
-	_, err := s.eventStream.UpdateStream(&nats.StreamConfig{
+	_, err := s.event.UpdateStream(&nats.StreamConfig{
 		Name:     name,
 		Subjects: subs,
 		MaxBytes: 256 << 20,
@@ -66,7 +66,7 @@ func (s *Stream) Update(name, subject string) error {
 }
 
 func (s *Stream) Delete(name string) error {
-	err := s.eventStream.DeleteStream(name)
+	err := s.event.DeleteStream(name)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (s *Stream) Delete(name string) error {
 }
 
 func (s *Stream) CreateConsumer(_type, streamName, consumerName, subject, queue string) error {
-	_, err := s.eventStream.StreamInfo(streamName)
+	_, err := s.event.StreamInfo(streamName)
 	if err != nil && !errors.Is(err, nats.ErrStreamNotFound) {
 		return err
 	}
@@ -104,7 +104,7 @@ func (s *Stream) CreateConsumer(_type, streamName, consumerName, subject, queue 
 			consumerSetup.DeliverGroup = queue
 		}
 	}
-	_, err = s.eventStream.AddConsumer(streamName, consumerSetup)
+	_, err = s.event.AddConsumer(streamName, consumerSetup)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (s *Stream) CreateConsumer(_type, streamName, consumerName, subject, queue 
 }
 
 func (s *Stream) DeleteConsumer(streamName, consumerName string) error {
-	err := s.eventStream.DeleteConsumer(streamName, consumerName)
+	err := s.event.DeleteConsumer(streamName, consumerName)
 	if err != nil {
 		return err
 	}
@@ -121,13 +121,14 @@ func (s *Stream) DeleteConsumer(streamName, consumerName string) error {
 	return nil
 }
 
-func (s *Stream) DelayPublish(subject, data string, delay int) {
+func (s *Stream) DelayPublish(subject, data string, delay int) error {
 	customMsg := nats.NewMsg(subject)
 	customMsg.Data = []byte(data)
 	customMsg.Header.Add("AI-Delayed-Time", fmt.Sprintf("%d", delay))
 	if err := s.svc.PublishMsg(customMsg); err != nil {
-		log.Fatalf("err publishing: %s", err.Error())
+		return fmt.Errorf("err publishing: %s", err.Error())
 	}
+	return nil
 }
 
 func (s *Stream) IsDelayedMsg(msg *nats.Msg) bool {

@@ -17,7 +17,7 @@ type ProfitService interface {
 	ReplyProfit(subject, queue string)
 	BatchSubscribeProfit(subject string, batch int)
 	PushSubscribeProfit(subject string)
-	PublishDelayedProfit(subject string, i, delay int)
+	PublishDelayedProfit(subject string, i, delay int) string
 }
 
 func NewProfitService(_stream connector.StreamConnector) ProfitService {
@@ -62,7 +62,8 @@ func (p *profitServiceImpl) PushSubscribeProfit(subject string) {
 	p.Stream.PushProcessProfit(subject)
 }
 
-func (p *profitServiceImpl) PublishDelayedProfit(subject string, i, delay int) {
+func (p *profitServiceImpl) PublishDelayedProfit(subject string, i, delay int) string {
 	data := GetRandomProfitDistribute(i)
-	p.Stream.DelayedProfit(subject, data, delay)
+	dataString := p.Stream.DelayedProfit(subject, data, delay)
+	return dataString
 }
