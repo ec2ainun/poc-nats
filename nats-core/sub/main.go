@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
-	"runtime"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
 
 	connector "github.com/ec2ainun/poc-nats/business/connector"
 	service "github.com/ec2ainun/poc-nats/business/service"
@@ -18,8 +22,6 @@ func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
-	// Exit the main goroutine but allow subscribe to continue running
-	runtime.Goexit()
 }
 
 func run() error {
@@ -35,7 +37,20 @@ func run() error {
 		return errors.Wrap(err, "err open config")
 	}
 
-	opts := []nats.Option{nats.Name(goal)}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	isNATSConnClosed := make(chan bool)
+	closed := func(nc *nats.Conn) {
+		if nc.LastError() == nil {
+			log.Printf("NATS conn closed")
+			isNATSConnClosed <- true
+		} else {
+			log.Fatalf("Err clossing NATS conn: %v", nc.LastError())
+		}
+	}
+
+	opts := []nats.Option{nats.Name(goal), nats.ClosedHandler(closed)}
 	opts = messaging.SetupConnOptions(opts)
 
 	nc, err := messaging.Open(false, conf, opts)
@@ -47,7 +62,21 @@ func run() error {
 	streamSvc := connector.NewStreamConnector(streamProvider)
 	profitSvc := service.NewProfitService(streamSvc)
 
-	profitSvc.SubscribeProfit(subject)
+	var wg sync.WaitGroup
+	go func() {
+		<-ctx.Done()
+		if err := nc.Drain(); err != nil {
+			log.Fatalf("Error on drain: %v", err)
+		}
+		<-isNATSConnClosed
+		<-time.After(5 * time.Second) //add leeway to gracefull shutdown
+		wg.Done()
+		os.Exit(0)
+	}()
+
+	wg.Add(1)
+	go profitSvc.SubscribeProfit(subject)
+	wg.Wait()
 
 	return nil
 }
