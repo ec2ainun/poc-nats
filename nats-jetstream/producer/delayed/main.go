@@ -59,6 +59,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	defer nc.Drain()
 
 	jsctx, err := nc.JetStream()
 	if err != nil {
