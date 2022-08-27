@@ -58,6 +58,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	defer nc.Drain()
 
 	streamProvider := stream.NewNATSProvider(nc)
 	streamSvc := connector.NewStreamConnector(streamProvider)
