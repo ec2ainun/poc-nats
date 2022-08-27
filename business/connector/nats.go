@@ -8,8 +8,10 @@ import (
 	"os"
 	"time"
 
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	model "github.com/ec2ainun/poc-nats/business/dto"
 	messaging "github.com/ec2ainun/poc-nats/connector/messaging"
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 )
 
@@ -44,8 +46,20 @@ func (s *streamConnectorImpl) MonitorAll(subject string) {
 	}
 }
 
+// https://github.com/cloudevents/spec/blob/main/cloudevents/formats/cloudevents.json
 func (s *streamConnectorImpl) SendProfit(subject string, data model.ProfitInvestment) string {
-	out, err := json.Marshal(data)
+	cEvent := cloudevents.NewEvent()
+	cEvent.SetID(uuid.New().String())
+	cEvent.SetSource("https://github.com/ec2ainun/poc-nats/business/connector")
+	cEvent.SetSpecVersion("1.0")
+	cEvent.SetType("org.company.stream.SendProfit")
+	cEvent.SetSubject(subject)
+	cEvent.SetTime(time.Now())
+	err := cEvent.SetData("application/json", data)
+	if err != nil {
+		log.Fatalf("err gen cloudevents: %s", err.Error())
+	}
+	out, err := json.Marshal(cEvent)
 	if err != nil {
 		log.Fatalf("err marshal: %s", err.Error())
 	}
@@ -58,9 +72,13 @@ func (s *streamConnectorImpl) SendProfit(subject string, data model.ProfitInvest
 
 func (s *streamConnectorImpl) ProcessProfit(subject string) {
 	_, err := s.svc.Subscribe(subject, func(msg *nats.Msg) {
+		cEvent := cloudevents.Event{}
 		data := model.ProfitInvestment{}
-		if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+		if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
 			log.Fatalf("err unmarshal: %s", err.Error())
+		}
+		if err := cEvent.DataAs(&data); err != nil {
+			fmt.Printf("err got cloudevents: %s\n", err.Error())
 		}
 		log.Printf("Received from %s: %s\n", msg.Subject, data.String())
 	})
@@ -73,9 +91,13 @@ func (s *streamConnectorImpl) QueueProcessProfit(subject, queue string) {
 	i := 0
 	err := s.svc.Queue(subject, queue, func(msg *nats.Msg) {
 		i++
+		cEvent := cloudevents.Event{}
 		data := model.ProfitInvestment{}
-		if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+		if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
 			log.Fatalf("err unmarshal: %s", err.Error())
+		}
+		if err := cEvent.DataAs(&data); err != nil {
+			fmt.Printf("err got cloudevents: %s\n", err.Error())
 		}
 		log.Printf("[#%d] Received on [%s, %s]: '%s'\n", i, msg.Subject, queue, data.String())
 	})
@@ -85,7 +107,18 @@ func (s *streamConnectorImpl) QueueProcessProfit(subject, queue string) {
 }
 
 func (s *streamConnectorImpl) RequestProfit(subject string, data model.ProfitInvestment) string {
-	out, err := json.Marshal(data)
+	cEvent := cloudevents.NewEvent()
+	cEvent.SetID(uuid.New().String())
+	cEvent.SetSource("https://github.com/ec2ainun/poc-nats/business/connector")
+	cEvent.SetSpecVersion("1.0")
+	cEvent.SetType("org.company.stream.RequestProfit")
+	cEvent.SetSubject(subject)
+	cEvent.SetTime(time.Now())
+	err := cEvent.SetData("application/json", data)
+	if err != nil {
+		log.Fatalf("err gen cloudevents: %s", err.Error())
+	}
+	out, err := json.Marshal(cEvent)
 	if err != nil {
 		log.Fatalf("err marshal: %s", err.Error())
 	}
@@ -104,9 +137,13 @@ func (s *streamConnectorImpl) RespondProfit(subject, queue string) {
 	i := 0
 	err := s.svc.Queue(subject, queue, func(msg *nats.Msg) {
 		i++
+		cEvent := cloudevents.Event{}
 		data := model.ProfitInvestment{}
-		if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+		if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
 			log.Fatalf("err unmarshal: %s", err.Error())
+		}
+		if err := cEvent.DataAs(&data); err != nil {
+			fmt.Printf("err got cloudevents: %s\n", err.Error())
 		}
 		log.Printf("[#%d] Received on [%s, %s]: '%s'\n", i, msg.Subject, queue, data.String())
 
@@ -140,9 +177,13 @@ func (s *streamConnectorImpl) BatchProcessProfit(subject string, batch int) {
 		}
 
 		for _, msg := range msgs {
+			cEvent := cloudevents.Event{}
 			data := model.ProfitInvestment{}
-			if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
-				log.Fatalf("err unmarshal : %s", err.Error())
+			if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
+				log.Fatalf("err unmarshal: %s", err.Error())
+			}
+			if err := cEvent.DataAs(&data); err != nil {
+				fmt.Printf("err got cloudevents: %s\n", err.Error())
 			}
 			log.Printf("Received from %s: %s\n", msg.Subject, data.String())
 			if err := msg.AckSync(); err != nil {
@@ -168,16 +209,24 @@ func (s *streamConnectorImpl) PushProcessProfit(subject string) {
 				if err := msg.NakWithDelay(delayedVal); err != nil {
 					log.Fatalf("err nack :%s", err.Error())
 				}
+				cEvent := cloudevents.Event{}
 				data := model.ProfitInvestment{}
-				if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+				if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
 					log.Fatalf("err unmarshal: %s", err.Error())
+				}
+				if err := cEvent.DataAs(&data); err != nil {
+					fmt.Printf("err got cloudevents: %s\n", err.Error())
 				}
 				log.Printf("msg %d for %s, delayed for %s", data.Id, data.Receiver, delayedVal)
 			} else {
 				i++
+				cEvent := cloudevents.Event{}
 				data := model.ProfitInvestment{}
-				if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+				if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
 					log.Fatalf("err unmarshal: %s", err.Error())
+				}
+				if err := cEvent.DataAs(&data); err != nil {
+					fmt.Printf("err got cloudevents: %s\n", err.Error())
 				}
 				log.Printf("Received delayed msg from [%s, %s]: %s\n", msg.Sub.Subject, msg.Sub.Queue, data.String())
 				if err := msg.AckSync(); err != nil {
@@ -187,9 +236,13 @@ func (s *streamConnectorImpl) PushProcessProfit(subject string) {
 			}
 		} else {
 			i++
+			cEvent := cloudevents.Event{}
 			data := model.ProfitInvestment{}
-			if err := json.Unmarshal([]byte(msg.Data), &data); err != nil {
+			if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
 				log.Fatalf("err unmarshal: %s", err.Error())
+			}
+			if err := cEvent.DataAs(&data); err != nil {
+				fmt.Printf("err got cloudevents: %s\n", err.Error())
 			}
 			log.Printf("Received from [%s, %s]: %s\n", msg.Sub.Subject, msg.Sub.Queue, data.String())
 			if err := msg.Ack(); err != nil {
@@ -204,7 +257,18 @@ func (s *streamConnectorImpl) PushProcessProfit(subject string) {
 }
 
 func (s *streamConnectorImpl) DelayedProfit(subject string, data model.ProfitInvestment, delay int) string {
-	out, err := json.Marshal(data)
+	cEvent := cloudevents.NewEvent()
+	cEvent.SetID(uuid.New().String())
+	cEvent.SetSource("https://github.com/ec2ainun/poc-nats/business/connector")
+	cEvent.SetSpecVersion("1.0")
+	cEvent.SetType("org.company.stream.DelayedProfit")
+	cEvent.SetSubject(subject)
+	cEvent.SetTime(time.Now())
+	err := cEvent.SetData("application/json", data)
+	if err != nil {
+		log.Fatalf("err gen cloudevents: %s", err.Error())
+	}
+	out, err := json.Marshal(cEvent)
 	if err != nil {
 		log.Fatalf("err marshal: %s", err.Error())
 	}
