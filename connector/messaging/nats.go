@@ -34,15 +34,14 @@ func NewNATSQueueProvider(server *nats.Conn, queueName string) *Stream {
 	}
 }
 
-func (s *Stream) Publish(subject string, data string) error {
+func (s *Stream) Publish(subject string, payload []byte) error {
 	if s.event == nil {
-		if err := s.svc.Publish(subject, []byte(data)); err != nil {
+		if err := s.svc.Publish(subject, payload); err != nil {
 			return fmt.Errorf("err publishing: %s", err.Error())
 		}
-		return nil
 	} else {
 		if s.pubType == "async" {
-			futureAck, err := s.event.PublishAsync(subject, []byte(data))
+			futureAck, err := s.event.PublishAsync(subject, payload)
 			if err != nil {
 				return fmt.Errorf("err publishing: %s", err.Error())
 			}
@@ -58,12 +57,12 @@ func (s *Stream) Publish(subject string, data string) error {
 				return fmt.Errorf("err unable to finish in time:  %s", ctx.Err().Error())
 			}
 		} else {
-			if _, err := s.event.Publish(subject, []byte(data)); err != nil {
+			if _, err := s.event.Publish(subject, payload); err != nil {
 				return fmt.Errorf("err publishing: %s", err.Error())
 			}
 		}
-		return nil
 	}
+	return nil
 }
 
 func (s *Stream) Subscribe(subject string, callback Handler) (*nats.Subscription, error) {
@@ -109,8 +108,8 @@ func (s *Stream) Subscribe(subject string, callback Handler) (*nats.Subscription
 	return sub, err
 }
 
-func (s *Stream) Request(subject string, data string, callback Handler) error {
-	msg, err := s.svc.Request(subject, []byte(data), 2*time.Second)
+func (s *Stream) Request(subject string, payload []byte, callback Handler) error {
+	msg, err := s.svc.Request(subject, payload, 2*time.Second)
 	if err != nil {
 		if s.svc.LastError() != nil {
 			return fmt.Errorf("err requesting to %s:%v", subject, s.svc.LastError())

@@ -11,7 +11,6 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	model "github.com/ec2ainun/poc-nats/business/dto"
 	messaging "github.com/ec2ainun/poc-nats/connector/messaging"
-	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 )
 
@@ -48,22 +47,12 @@ func (s *streamConnectorImpl) MonitorAll(subject string) {
 
 // https://github.com/cloudevents/spec/blob/main/cloudevents/formats/cloudevents.json
 func (s *streamConnectorImpl) SendProfit(subject string, data model.ProfitInvestment) string {
-	cEvent := cloudevents.NewEvent()
-	cEvent.SetID(uuid.New().String())
-	cEvent.SetSource("https://github.com/ec2ainun/poc-nats/business/connector")
-	cEvent.SetSpecVersion("1.0")
-	cEvent.SetType("org.company.stream.SendProfit")
-	cEvent.SetSubject(subject)
-	cEvent.SetTime(time.Now())
-	err := cEvent.SetData("application/json", data)
-	if err != nil {
-		log.Fatalf("err gen cloudevents: %s", err.Error())
-	}
-	out, err := json.Marshal(cEvent)
+	cEvent := NewEvent(subject, "SendProfit", data)
+	out, err := cEvent.MarshalJSON()
 	if err != nil {
 		log.Fatalf("err marshal: %s", err.Error())
 	}
-	err = s.svc.Publish(subject, string(out))
+	err = s.svc.Publish(subject, out)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -105,22 +94,12 @@ func (s *streamConnectorImpl) QueueProcessProfit(subject string) {
 }
 
 func (s *streamConnectorImpl) RequestProfit(subject string, data model.ProfitInvestment) string {
-	cEvent := cloudevents.NewEvent()
-	cEvent.SetID(uuid.New().String())
-	cEvent.SetSource("https://github.com/ec2ainun/poc-nats/business/connector")
-	cEvent.SetSpecVersion("1.0")
-	cEvent.SetType("org.company.stream.RequestProfit")
-	cEvent.SetSubject(subject)
-	cEvent.SetTime(time.Now())
-	err := cEvent.SetData("application/json", data)
-	if err != nil {
-		log.Fatalf("err gen cloudevents: %s", err.Error())
-	}
-	out, err := json.Marshal(cEvent)
+	cEvent := NewEvent(subject, "RequestProfit", data)
+	out, err := cEvent.MarshalJSON()
 	if err != nil {
 		log.Fatalf("err marshal: %s", err.Error())
 	}
-	err = s.svc.Request(subject, string(out), processingReply)
+	err = s.svc.Request(subject, out, processingReply)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -250,22 +229,12 @@ func (s *streamConnectorImpl) PushProcessProfit(subject string) {
 }
 
 func (s *streamConnectorImpl) DelayedProfit(subject string, data model.ProfitInvestment, delay int) string {
-	cEvent := cloudevents.NewEvent()
-	cEvent.SetID(uuid.New().String())
-	cEvent.SetSource("https://github.com/ec2ainun/poc-nats/business/connector")
-	cEvent.SetSpecVersion("1.0")
-	cEvent.SetType("org.company.stream.DelayedProfit")
-	cEvent.SetSubject(subject)
-	cEvent.SetTime(time.Now())
-	err := cEvent.SetData("application/json", data)
-	if err != nil {
-		log.Fatalf("err gen cloudevents: %s", err.Error())
-	}
-	out, err := json.Marshal(cEvent)
+	cEvent := NewEvent(subject, "DelayedProfit", data)
+	out, err := cEvent.MarshalJSON()
 	if err != nil {
 		log.Fatalf("err marshal: %s", err.Error())
 	}
-	err = s.svc.DelayPublish(subject, string(out), delay)
+	err = s.svc.DelayPublish(subject, out, delay)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
