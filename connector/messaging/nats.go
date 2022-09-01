@@ -27,15 +27,21 @@ func NewNATSProvider(server *nats.Conn) *Stream {
 	}
 }
 
-func (s *Stream) Publish(subject string, data string) error {
+func NewNATSQueueProvider(server *nats.Conn, queueName string) *Stream {
+	return &Stream{
+		svc:       server,
+		queueName: queueName,
+	}
+}
+
+func (s *Stream) Publish(subject string, payload []byte) error {
 	if s.event == nil {
-		if err := s.svc.Publish(subject, []byte(data)); err != nil {
+		if err := s.svc.Publish(subject, payload); err != nil {
 			return fmt.Errorf("err publishing: %s", err.Error())
 		}
-		return nil
 	} else {
 		if s.pubType == "async" {
-			futureAck, err := s.event.PublishAsync(subject, []byte(data))
+			futureAck, err := s.event.PublishAsync(subject, payload)
 			if err != nil {
 				return fmt.Errorf("err publishing: %s", err.Error())
 			}
@@ -51,12 +57,12 @@ func (s *Stream) Publish(subject string, data string) error {
 				return fmt.Errorf("err unable to finish in time:  %s", ctx.Err().Error())
 			}
 		} else {
-			if _, err := s.event.Publish(subject, []byte(data)); err != nil {
+			if _, err := s.event.Publish(subject, payload); err != nil {
 				return fmt.Errorf("err publishing: %s", err.Error())
 			}
 		}
-		return nil
 	}
+	return nil
 }
 
 func (s *Stream) Subscribe(subject string, callback Handler) (*nats.Subscription, error) {
@@ -64,10 +70,15 @@ func (s *Stream) Subscribe(subject string, callback Handler) (*nats.Subscription
 	var err error
 
 	if s.event == nil {
-		sub, err = s.svc.Subscribe(subject, func(msg *nats.Msg) {
-			callback(msg)
-		})
-		s.svc.Flush()
+		if s.queueName == "" {
+			sub, err = s.svc.Subscribe(subject, func(msg *nats.Msg) {
+				callback(msg)
+			})
+		} else {
+			sub, err = s.svc.QueueSubscribe(subject, s.queueName, func(msg *nats.Msg) {
+				callback(msg)
+			})
+		}
 	} else {
 		if s.subType == "pull" {
 			// pull
@@ -93,11 +104,45 @@ func (s *Stream) Subscribe(subject string, callback Handler) (*nats.Subscription
 			}
 		}
 	}
+	s.svc.Flush()
 	return sub, err
 }
 
-func (s *Stream) Request(subject string, data string, callback Handler) error {
-	msg, err := s.svc.Request(subject, []byte(data), 2*time.Second)
+func (s *Stream) ChanSubscribe(subject string, chMsg chan *nats.Msg) (*nats.Subscription, error) {
+	var sub *nats.Subscription
+	var err error
+
+	if s.event == nil {
+		if s.queueName == "" {
+			sub, err = s.svc.ChanSubscribe(subject, chMsg)
+		} else {
+			sub, err = s.svc.ChanQueueSubscribe(subject, s.queueName, chMsg)
+		}
+	} else {
+		if s.subType == "pull" {
+			// pull
+			return sub, fmt.Errorf("pull sub type does not support channel")
+		} else {
+			// push
+			if s.consumerName == "" {
+				// create ephermal consumer
+				sub, err = s.event.ChanSubscribe(subject, chMsg, nats.BindStream(s.streamName))
+			} else {
+				// subscribe using an existing durable consumer
+				if s.queueName == "" {
+					sub, err = s.event.ChanSubscribe(subject, chMsg, nats.Durable(s.consumerName))
+				} else {
+					sub, err = s.event.ChanQueueSubscribe(subject, s.queueName, chMsg, nats.Durable(s.consumerName))
+				}
+			}
+		}
+	}
+	s.svc.Flush()
+	return sub, err
+}
+
+func (s *Stream) Request(subject string, payload []byte, callback Handler) error {
+	msg, err := s.svc.Request(subject, payload, 2*time.Second)
 	if err != nil {
 		if s.svc.LastError() != nil {
 			return fmt.Errorf("err requesting to %s:%v", subject, s.svc.LastError())
@@ -105,19 +150,5 @@ func (s *Stream) Request(subject string, data string, callback Handler) error {
 		return fmt.Errorf("err requesting to %s:%v", subject, err)
 	}
 	callback(msg)
-	return nil
-}
-
-func (s *Stream) Queue(subject, queue string, callback Handler) error {
-	_, err := s.svc.QueueSubscribe(subject, queue, func(msg *nats.Msg) {
-		callback(msg)
-	})
-
-	if err != nil {
-		if s.svc.LastError() != nil {
-			return fmt.Errorf("err requesting to %s:%v", subject, s.svc.LastError())
-		}
-		return fmt.Errorf("err subscribing queue to %s,%s:%v", subject, queue, err)
-	}
 	return nil
 }

@@ -121,9 +121,9 @@ func (s *Stream) DeleteConsumer(streamName, consumerName string) error {
 	return nil
 }
 
-func (s *Stream) DelayPublish(subject, data string, delay int) error {
+func (s *Stream) DelayPublish(subject string, payload []byte, delay int) error {
 	customMsg := nats.NewMsg(subject)
-	customMsg.Data = []byte(data)
+	customMsg.Data = payload
 	customMsg.Header.Add("AI-Delayed-Time", fmt.Sprintf("%d", delay))
 	if err := s.svc.PublishMsg(customMsg); err != nil {
 		return fmt.Errorf("err publishing: %s", err.Error())

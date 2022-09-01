@@ -59,7 +59,7 @@ func run() error {
 		return err
 	}
 
-	streamProvider := stream.NewNATSProvider(nc)
+	streamProvider := stream.NewNATSQueueProvider(nc, *queueName)
 	streamSvc := connector.NewStreamConnector(streamProvider)
 	profitSvc := service.NewProfitService(streamSvc)
 
@@ -76,7 +76,8 @@ func run() error {
 	}()
 
 	wg.Add(1)
-	go profitSvc.ReplyProfit(subject, *queueName)
+	// go profitSvc.ReplyProfit(subject)
+	go profitSvc.ChanReplyProfit(subject)
 	wg.Wait()
 
 	return nil
