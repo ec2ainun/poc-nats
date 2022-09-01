@@ -12,11 +12,15 @@ type ProfitService interface {
 	Monitor(subject string)
 	PublishProfit(subject string, id int) string
 	SubscribeProfit(subject string)
+	ChanSubscribeProfit(subject string)
 	QueueSubscribeProfit(subject string)
+	ChanQueueSubscribeProfit(subject string)
 	RequestProfit(subject string, id int) string
 	ReplyProfit(subject string)
+	ChanReplyProfit(subject string)
 	BatchSubscribeProfit(subject string, batch int)
 	PushSubscribeProfit(subject string)
+	ChanPushSubscribeProfit(subject string)
 	PublishDelayedProfit(subject string, i, delay int) string
 }
 
@@ -40,8 +44,16 @@ func (p *profitServiceImpl) SubscribeProfit(subject string) {
 	p.Stream.ProcessProfit(subject)
 }
 
+func (p *profitServiceImpl) ChanSubscribeProfit(subject string) {
+	p.Stream.ChanProcessProfit(subject)
+}
+
 func (p *profitServiceImpl) QueueSubscribeProfit(subject string) {
 	p.Stream.QueueProcessProfit(subject)
+}
+
+func (p *profitServiceImpl) ChanQueueSubscribeProfit(subject string) {
+	p.Stream.ChanQueueProcessProfit(subject)
 }
 
 func (p *profitServiceImpl) RequestProfit(subject string, id int) string {
@@ -54,12 +66,20 @@ func (p *profitServiceImpl) ReplyProfit(subject string) {
 	p.Stream.RespondProfit(subject)
 }
 
+func (p *profitServiceImpl) ChanReplyProfit(subject string) {
+	p.Stream.ChanRespondProfit(subject)
+}
+
 func (p *profitServiceImpl) BatchSubscribeProfit(subject string, batch int) {
 	p.Stream.BatchProcessProfit(subject, batch)
 }
 
 func (p *profitServiceImpl) PushSubscribeProfit(subject string) {
 	p.Stream.PushProcessProfit(subject)
+}
+
+func (p *profitServiceImpl) ChanPushSubscribeProfit(subject string) {
+	p.Stream.ChanPushProcessProfit(subject)
 }
 
 func (p *profitServiceImpl) PublishDelayedProfit(subject string, i, delay int) string {

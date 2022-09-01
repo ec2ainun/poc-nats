@@ -75,7 +75,8 @@ func run() error {
 	}()
 
 	wg.Add(1)
-	go profitSvc.SubscribeProfit(subject)
+	// go profitSvc.SubscribeProfit(subject)
+	go profitSvc.ChanSubscribeProfit(subject)
 	wg.Wait()
 
 	return nil
