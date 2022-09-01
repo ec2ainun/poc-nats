@@ -23,9 +23,9 @@ type StreamConnector interface {
 	MonitorAll(subject string)
 	SendProfit(subject string, data model.ProfitInvestment) string
 	ProcessProfit(subject string)
-	QueueProcessProfit(subject, queue string)
+	QueueProcessProfit(subject string)
 	RequestProfit(subject string, data model.ProfitInvestment) string
-	RespondProfit(subject, queue string)
+	RespondProfit(subject string)
 	BatchProcessProfit(subject string, batch int)
 	PushProcessProfit(subject string)
 	DelayedProfit(subject string, data model.ProfitInvestment, delay int) string
@@ -87,10 +87,8 @@ func (s *streamConnectorImpl) ProcessProfit(subject string) {
 	}
 }
 
-func (s *streamConnectorImpl) QueueProcessProfit(subject, queue string) {
-	i := 0
-	err := s.svc.Queue(subject, queue, func(msg *nats.Msg) {
-		i++
+func (s *streamConnectorImpl) QueueProcessProfit(subject string) {
+	_, err := s.svc.Subscribe(subject, func(msg *nats.Msg) {
 		cEvent := cloudevents.Event{}
 		data := model.ProfitInvestment{}
 		if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
@@ -99,7 +97,7 @@ func (s *streamConnectorImpl) QueueProcessProfit(subject, queue string) {
 		if err := cEvent.DataAs(&data); err != nil {
 			fmt.Printf("err got cloudevents: %s\n", err.Error())
 		}
-		log.Printf("[#%d] Received on [%s, %s]: '%s'\n", i, msg.Subject, queue, data.String())
+		log.Printf("Received from [%s, %s]: %s\n", msg.Sub.Subject, msg.Sub.Queue, data.String())
 	})
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -133,10 +131,8 @@ func processingReply(msg *nats.Msg) {
 	log.Printf("Received data from %s: %s\n", msg.Subject, string(msg.Data))
 }
 
-func (s *streamConnectorImpl) RespondProfit(subject, queue string) {
-	i := 0
-	err := s.svc.Queue(subject, queue, func(msg *nats.Msg) {
-		i++
+func (s *streamConnectorImpl) RespondProfit(subject string) {
+	_, err := s.svc.Subscribe(subject, func(msg *nats.Msg) {
 		cEvent := cloudevents.Event{}
 		data := model.ProfitInvestment{}
 		if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
@@ -145,12 +141,12 @@ func (s *streamConnectorImpl) RespondProfit(subject, queue string) {
 		if err := cEvent.DataAs(&data); err != nil {
 			fmt.Printf("err got cloudevents: %s\n", err.Error())
 		}
-		log.Printf("[#%d] Received on [%s, %s]: '%s'\n", i, msg.Subject, queue, data.String())
+		log.Printf("Received from [%s, %s]: %s\n", msg.Sub.Subject, msg.Sub.Queue, data.String())
 
 		// sent respond back
 		resp := data.ProfitAmount - 10
 		msg.Respond([]byte(fmt.Sprintf("%.2f", resp)))
-		log.Printf("[#%d] Replied to [%s]: '%s'\n", i, msg.Subject, fmt.Sprintf("%.2f", resp))
+		log.Printf("Replied to [%s]: %s\n", msg.Subject, fmt.Sprintf("%.2f", resp))
 	})
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -199,7 +195,6 @@ func (s *streamConnectorImpl) BatchProcessProfit(subject string, batch int) {
 }
 
 func (s *streamConnectorImpl) PushProcessProfit(subject string) {
-	i := 0
 	_, err := s.svc.Subscribe(subject, func(msg *nats.Msg) {
 		// check delayed msg
 		if s.svc.IsDelayedMsg(msg) {
@@ -219,7 +214,6 @@ func (s *streamConnectorImpl) PushProcessProfit(subject string) {
 				}
 				log.Printf("msg %d for %s, delayed for %s", data.Id, data.Receiver, delayedVal)
 			} else {
-				i++
 				cEvent := cloudevents.Event{}
 				data := model.ProfitInvestment{}
 				if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
@@ -232,10 +226,9 @@ func (s *streamConnectorImpl) PushProcessProfit(subject string) {
 				if err := msg.AckSync(); err != nil {
 					log.Fatalf("err ack :%s", err.Error())
 				}
-				log.Printf("Processed message %d", i)
+				log.Printf("Processed message")
 			}
 		} else {
-			i++
 			cEvent := cloudevents.Event{}
 			data := model.ProfitInvestment{}
 			if err := json.Unmarshal([]byte(msg.Data), &cEvent); err != nil {
@@ -248,7 +241,7 @@ func (s *streamConnectorImpl) PushProcessProfit(subject string) {
 			if err := msg.Ack(); err != nil {
 				log.Fatalf("err ack :%s", err.Error())
 			}
-			log.Printf("Processed message %d", i)
+			log.Printf("Processed message")
 		}
 	})
 	if err != nil {

@@ -12,9 +12,9 @@ type ProfitService interface {
 	Monitor(subject string)
 	PublishProfit(subject string, id int) string
 	SubscribeProfit(subject string)
-	QueueSubscribeProfit(subject, queue string)
+	QueueSubscribeProfit(subject string)
 	RequestProfit(subject string, id int) string
-	ReplyProfit(subject, queue string)
+	ReplyProfit(subject string)
 	BatchSubscribeProfit(subject string, batch int)
 	PushSubscribeProfit(subject string)
 	PublishDelayedProfit(subject string, i, delay int) string
@@ -40,8 +40,8 @@ func (p *profitServiceImpl) SubscribeProfit(subject string) {
 	p.Stream.ProcessProfit(subject)
 }
 
-func (p *profitServiceImpl) QueueSubscribeProfit(subject, queue string) {
-	p.Stream.QueueProcessProfit(subject, queue)
+func (p *profitServiceImpl) QueueSubscribeProfit(subject string) {
+	p.Stream.QueueProcessProfit(subject)
 }
 
 func (p *profitServiceImpl) RequestProfit(subject string, id int) string {
@@ -50,8 +50,8 @@ func (p *profitServiceImpl) RequestProfit(subject string, id int) string {
 	return dataString
 }
 
-func (p *profitServiceImpl) ReplyProfit(subject, queue string) {
-	p.Stream.RespondProfit(subject, queue)
+func (p *profitServiceImpl) ReplyProfit(subject string) {
+	p.Stream.RespondProfit(subject)
 }
 
 func (p *profitServiceImpl) BatchSubscribeProfit(subject string, batch int) {
