@@ -108,6 +108,39 @@ func (s *Stream) Subscribe(subject string, callback Handler) (*nats.Subscription
 	return sub, err
 }
 
+func (s *Stream) ChanSubscribe(subject string, chMsg chan *nats.Msg) (*nats.Subscription, error) {
+	var sub *nats.Subscription
+	var err error
+
+	if s.event == nil {
+		if s.queueName == "" {
+			sub, err = s.svc.ChanSubscribe(subject, chMsg)
+		} else {
+			sub, err = s.svc.ChanQueueSubscribe(subject, s.queueName, chMsg)
+		}
+	} else {
+		if s.subType == "pull" {
+			// pull
+			return sub, fmt.Errorf("pull sub type does not support channel")
+		} else {
+			// push
+			if s.consumerName == "" {
+				// create ephermal consumer
+				sub, err = s.event.ChanSubscribe(subject, chMsg, nats.BindStream(s.streamName))
+			} else {
+				// subscribe using an existing durable consumer
+				if s.queueName == "" {
+					sub, err = s.event.ChanSubscribe(subject, chMsg, nats.Durable(s.consumerName))
+				} else {
+					sub, err = s.event.ChanQueueSubscribe(subject, s.queueName, chMsg, nats.Durable(s.consumerName))
+				}
+			}
+		}
+	}
+	s.svc.Flush()
+	return sub, err
+}
+
 func (s *Stream) Request(subject string, payload []byte, callback Handler) error {
 	msg, err := s.svc.Request(subject, payload, 2*time.Second)
 	if err != nil {
