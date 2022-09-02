@@ -6,6 +6,10 @@ the rationale why choose NATS over other messaging system comes from [this](http
 
 ## Getting Started
 
+### tldr
+
+if you prefer to quickly run through this repository to see what is possible, and familiar enough using docker compose, you can read [composing](/COMPOSE.md)
+
 ### Installation
 
 - nats server
