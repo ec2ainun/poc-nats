@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	config "github.com/ec2ainun/poc-nats/business/utils"
@@ -17,8 +18,11 @@ func main() {
 	}
 }
 
+var gitSHA string
+var version string
+
 func run() error {
-	goal := "POC NATS Consumer Manager"
+	goal := fmt.Sprintf("POC NATS Consumer Manager, sha: %s, version: %s", gitSHA, version)
 	log.Println(goal)
 
 	cmd := flag.String("cmd", "", "command")

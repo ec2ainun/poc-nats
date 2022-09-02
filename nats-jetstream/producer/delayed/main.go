@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -23,8 +24,11 @@ func main() {
 	}
 }
 
+var gitSHA string
+var version string
+
 func run() error {
-	goal := "POC NATS Jetstream delayed message"
+	goal := fmt.Sprintf("POC NATS Jetstream delayed message, sha: %s, version: %s", gitSHA, version)
 	log.Println(goal)
 
 	genMessages := flag.Int("msgs", 10, "message count")
