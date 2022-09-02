@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  publish:
+    image: ec2ainun/producer-delay
+    command: -msgs 5 -d 10 "delayed.profit"
+    networks:
+      - data-stream
+  subscribe1:
+    image: ec2ainun/consumer-push
+    command: -sn scheduled-message -cn queue-push-delayed_profit -qn poc -s "delayed.profit"
+    networks:
+      - data-stream
+  subscribe2:
+    image: ec2ainun/consumer-push
+    command: -sn scheduled-message -cn queue-push-delayed_profit -qn poc -s "delayed.profit"
+    networks:
+      - data-stream
+
+networks:
+  data-stream:
+    external: true
