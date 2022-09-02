@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  publish:
+    image: ec2ainun/producer-sync
+    command: -msgs 1000 -d 1 "profit.id"
+    networks:
+      - data-stream
+  subscribe1:
+    image: ec2ainun/consumer-push
+    command: -sn profit -cn queue-push-cprofit_id -qn poc -s "profit.id"
+    networks:
+      - data-stream
+  subscribe2:
+    image: ec2ainun/consumer-push
+    command: -sn profit -cn queue-push-cprofit_id -qn poc -s "profit.id"
+    networks:
+      - data-stream
+
+networks:
+  data-stream:
+    external: true

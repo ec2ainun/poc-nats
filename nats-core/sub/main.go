@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -24,8 +25,11 @@ func main() {
 	}
 }
 
+var gitSHA string
+var version string
+
 func run() error {
-	goal := "POC NATS Core subscriber"
+	goal := fmt.Sprintf("POC NATS Core subscriber, sha: %s, version: %s", gitSHA, version)
 	log.Println(goal)
 
 	flag.Parse()

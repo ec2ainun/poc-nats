@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  server_core:
+    image: nats:2.8.4-alpine
+    command: -c /etc/server.conf --name nats_core
+    volumes:
+      - ../../../nats-core/nats.conf:/etc/server.conf
+    networks:
+      - default
+  core_pub1:
+    image: ec2ainun/core-pub
+    command: "profit.sg"
+    depends_on:
+      - "server_core"
+    networks:
+      - default
+  core_pub2:
+    image: ec2ainun/core-pub
+    command: "profit.id"
+    depends_on:
+      - "server_core"
+    networks:
+      - default
+  core_sub:
+    image: ec2ainun/core-sub
+    command: "profit.*"
+    depends_on:
+      - "server_core"
+    networks:
+      - default
+
+networks:
+  default: {}

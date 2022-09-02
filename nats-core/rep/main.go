@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -24,8 +25,11 @@ func main() {
 	}
 }
 
+var gitSHA string
+var version string
+
 func run() error {
-	goal := "POC NATS Core replier"
+	goal := fmt.Sprintf("POC NATS Core replier, sha: %s, version: %s", gitSHA, version)
 	log.Println(goal)
 
 	var queueName = flag.String("q", "NATS-RPLY-22", "Queue Group Name")

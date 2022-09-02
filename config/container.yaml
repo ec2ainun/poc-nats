@@ -1,0 +1,2 @@
+serverURL: nats://server_core:4222
+jetstreamURL: nats://server_js:5222

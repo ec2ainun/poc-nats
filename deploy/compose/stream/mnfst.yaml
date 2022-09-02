@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+  server_js:
+    image: nats:2.8.4-alpine
+    command: -c /etc/server.conf --name nats_stream
+    volumes:
+      - ../../../nats-jetstream/js.conf:/etc/server.conf
+    networks:
+      - data-stream
+  stream-profit:
+    image: ec2ainun/stream-manager
+    command: --cmd add -n profit -s "profit.sg,profit.id"
+    depends_on:
+      - "server_js"
+    networks:
+      - data-stream
+  one-push-consumer:
+    image: ec2ainun/consumer-manager
+    command: --cmd add-push -sn profit -cn one-push-cprofit_id -s profit.id
+    depends_on:
+      - "server_js"
+      - "stream-profit"
+    networks:
+      - data-stream
+  queue-push-consumer:
+    image: ec2ainun/consumer-manager
+    command: --cmd add-push -sn profit -cn queue-push-cprofit_id -qn poc -s profit.id
+    depends_on:
+      - "server_js"
+      - "stream-profit"
+    networks:
+      - data-stream
+  pull-consumer:
+    image: ec2ainun/consumer-manager
+    command: --cmd add-pull -sn profit -cn pull-cprofit_id -s profit.id
+    depends_on:
+      - "server_js"
+      - "stream-profit"
+    networks:
+      - data-stream
+  stream-delay-profit:
+    image: ec2ainun/stream-manager
+    command: --cmd add -n scheduled-message -s "delayed.profit"
+    depends_on:
+      - "server_js"
+    networks:
+      - data-stream
+  delay-consumer:
+    image: ec2ainun/consumer-manager
+    command: --cmd add-push -sn scheduled-message -cn queue-push-delayed_profit -qn poc -s "delayed.profit"
+    depends_on:
+      - "server_js"
+      - "stream-delay-profit"
+    networks:
+      - data-stream
+
+networks:
+  data-stream:
+    external: true
