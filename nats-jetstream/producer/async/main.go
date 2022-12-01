@@ -82,9 +82,10 @@ func run() error {
 		os.Exit(0)
 	}()
 
+	time.Sleep(time.Duration(*delay) * time.Second)
 	for i := 0; i < *genMessages; i++ {
-		profitSvc.PublishProfit(subject, i)
-		time.Sleep(time.Duration(*delay) * time.Second)
+		go profitSvc.PublishProfit(subject, i)
+		// time.Sleep(time.Duration(*delay) * time.Second)
 	}
 
 	return nil

@@ -25,7 +25,7 @@ func GetRandomProfitDistribute(id int) model.ProfitInvestment {
 		Id:           id,
 		ProfitAmount: profit,
 		ProductName:  product[r],
-		Period:       time.Now().Format("2006-01-02 15:04:05"),
+		Period:       time.Now().Format("2006-01-02 15:04:05.00000000"),
 		Currency:     currency,
 		Sender:       "system",
 		Receiver:     uuid.New().String(),

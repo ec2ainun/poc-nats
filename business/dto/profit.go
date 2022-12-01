@@ -16,7 +16,7 @@ type ProfitInvestment struct {
 }
 
 func (p ProfitInvestment) String() string {
-	return fmt.Sprintf("[%d]: %s sent a payment of %0.2f %s from portofolio product %s to %s", p.Id, p.Sender, p.ProfitAmount, p.Currency, p.ProductName, p.Receiver)
+	return fmt.Sprintf("[%d]: %s sent a payment of %0.2f %s from portofolio product %s to %s at period %s", p.Id, p.Sender, p.ProfitAmount, p.Currency, p.ProductName, p.Receiver, p.Period)
 }
 
 func RoundFloat(val float64, precision uint) float64 {

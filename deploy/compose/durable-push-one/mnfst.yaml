@@ -3,7 +3,7 @@ version: '3'
 services:
   publish:
     image: ec2ainun/producer-sync
-    command: -msgs 1000 "profit.id"
+    command: -msgs 10000 "profit.id"
     networks:
       - data-stream
   subscribe:
